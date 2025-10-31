@@ -12,7 +12,26 @@ void Creature::normalize() {
 }
 
 void Creature::bounce() {
-    // should implement boundary controls here
+    if (m_x - m_collisionRadius < 0) {
+        m_x = m_collisionRadius;
+        m_dx *= -1;
+    }
+    
+    else if (m_x + m_collisionRadius > m_width) {
+        m_x = m_width - m_collisionRadius;
+        m_dx *= -1;
+    }
+
+    
+    if (m_y - m_collisionRadius < 0) {
+        m_y = m_collisionRadius;
+        m_dy *= -1;
+    }
+    
+    else if (m_y + m_collisionRadius > m_height) {
+        m_y = m_height - m_collisionRadius;
+        m_dy *= -1;
+    }
 }
 void Creature::bounceFrom(std::shared_ptr<Creature> other) {
     float dx = m_x - other->getX();
