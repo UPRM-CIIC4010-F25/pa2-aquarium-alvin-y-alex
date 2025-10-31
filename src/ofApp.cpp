@@ -54,6 +54,11 @@ void ofApp::setup(){
     ));
 
     ofSetLogLevel(OF_LOG_NOTICE); // Set default log level
+    
+    ambientSound.load("underwater.mp3");
+    ambientSound.setLoop(true);
+    ambientSound.setVolume(0.5);
+    ambientSound.play();
 }
 
 //--------------------------------------------------------------
@@ -73,6 +78,7 @@ void ofApp::update(){
     }
 
     gameManager->UpdateActiveScene();
+    ofSoundUpdate();
     
 
 
