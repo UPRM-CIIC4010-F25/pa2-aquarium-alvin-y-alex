@@ -32,9 +32,12 @@ void ofApp::setup(){
     player->setBounds(ofGetWindowWidth() - 20, ofGetWindowHeight() - 20);
 
 
-    myAquarium->addAquariumLevel(std::make_shared<Level_0>(0, 10));
-    myAquarium->addAquariumLevel(std::make_shared<Level_1>(1, 15));
-    myAquarium->addAquariumLevel(std::make_shared<Level_2>(2, 20));
+    myAquarium->addAquariumLevel(std::make_shared<Level_0>(0, 10));  
+    myAquarium->addAquariumLevel(std::make_shared<Level_1>(1, 15));  
+    myAquarium->addAquariumLevel(std::make_shared<Level_2>(2, 20));  
+    myAquarium->addAquariumLevel(std::make_shared<Level_3>(3, 30)); 
+    myAquarium->addAquariumLevel(std::make_shared<Level_4>(4, 40));  
+    myAquarium->addAquariumLevel(std::make_shared<Level_5>(5, 50));  
     myAquarium->Repopulate(); // initial population
 
     // now that we are mostly set, lets pass the player and the aquarium downstream
@@ -53,7 +56,7 @@ void ofApp::setup(){
         std::make_shared<GameSprite>("game-over.png", ofGetWindowWidth(), ofGetWindowHeight())
     ));
 
-    ofSetLogLevel(OF_LOG_NOTICE); // Set default log level
+    ofSetLogLevel(OF_LOG_NOTICE); 
     
     ambientSound.load("underwater.mp3");
     ambientSound.setLoop(true);
@@ -120,6 +123,10 @@ void ofApp::keyPressed(int key){
                 break;
             default:
                 break;
+        }
+      
+        if (key == ' ') {
+            gameScene->GetPlayer()->tryStartDash();
         }
     
         

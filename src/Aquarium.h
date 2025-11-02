@@ -9,7 +9,10 @@
 
 enum class AquariumCreatureType {
     NPCreature,
-    BiggerFish
+    BiggerFish,
+    DashPowerUp,
+    ZigzagFish,
+    CircularFish
 };
 
 string AquariumCreatureTypeToString(AquariumCreatureType t);
@@ -35,7 +38,7 @@ class AquariumLevel : public GameLevel {
         bool isCompleted() override;
         void populationReset();
         void levelReset(){m_level_score=0;this->populationReset();}
-        virtual std::vector<AquariumCreatureType> Repopulate() = 0;
+        std::vector<AquariumCreatureType> Repopulate();
     protected:
         std::vector<std::shared_ptr<AquariumLevelPopulationNode>> m_levelPopulation;
         int m_level_score;
@@ -67,12 +70,29 @@ public:
     void loseLife(int debounce);
     void increasePower(int value) { m_power += value; }
     void reduceDamageDebounce();
+
+   
+    void unlockDash();
+    void tryStartDash();
+    bool canDash() const; 
+    bool isDashing() const { return m_dashActive; }
+    void updateDash();
     
 private:
     int m_score = 0;
     int m_lives = 3;
     int m_power = 1; // mark current power lvl
     int m_damage_debounce = 0; // frames to wait after eating
+
+   
+    bool m_dashUnlocked = false;
+    bool m_dashActive = false;
+    int m_dashDuration = 30; 
+    int m_dashTimer = 0;
+    int m_dashCooldown = 0;
+    int m_dashCooldownDuration = 120; 
+    int m_baseSpeed = 10; 
+    int m_dashSpeed = 40; 
 };
 
 class NPCreature : public Creature {
@@ -93,6 +113,36 @@ public:
     void draw() const override;
 };
 
+class DashPowerUp : public NPCreature {
+public:
+    DashPowerUp(float x, float y, std::shared_ptr<GameSprite> sprite);
+    void move() override;
+    void draw() const override;
+};
+
+class ZigzagFish : public NPCreature {
+public:
+    ZigzagFish(float x, float y, int speed, std::shared_ptr<GameSprite> sprite);
+    void move() override;
+    void draw() const override;
+private:
+    float m_zigzagTimer = 0;
+    float m_zigzagPeriod = 60; 
+};
+
+class CircularFish : public NPCreature {
+public:
+    CircularFish(float x, float y, int speed, std::shared_ptr<GameSprite> sprite);
+    void move() override;
+    void draw() const override;
+private:
+    float m_angle = 0;
+    float m_radius = 100;
+    float m_centerX;
+    float m_centerY;
+    float m_rotationSpeed = 0.02f; // Slower rotation
+};
+
 
 class AquariumSpriteManager {
     public:
@@ -102,6 +152,9 @@ class AquariumSpriteManager {
     private:
         std::shared_ptr<GameSprite> m_npc_fish;
         std::shared_ptr<GameSprite> m_big_fish;
+        std::shared_ptr<GameSprite> m_zigzag_fish;
+        std::shared_ptr<GameSprite> m_circular_fish;
+        std::shared_ptr<GameSprite> m_powerup;
 };
 
 
@@ -165,28 +218,55 @@ class Level_0 : public AquariumLevel  {
     public:
         Level_0(int levelNumber, int targetScore): AquariumLevel(levelNumber, targetScore){
             this->m_levelPopulation.push_back(std::make_shared<AquariumLevelPopulationNode>(AquariumCreatureType::NPCreature, 10));
-
         };
-        std::vector<AquariumCreatureType> Repopulate() override;
-
 };
+
 class Level_1 : public AquariumLevel  {
     public:
         Level_1(int levelNumber, int targetScore): AquariumLevel(levelNumber, targetScore){
             this->m_levelPopulation.push_back(std::make_shared<AquariumLevelPopulationNode>(AquariumCreatureType::NPCreature, 20));
-
         };
-        std::vector<AquariumCreatureType> Repopulate() override;
-
-
 };
+
 class Level_2 : public AquariumLevel  {
     public:
         Level_2(int levelNumber, int targetScore): AquariumLevel(levelNumber, targetScore){
-            this->m_levelPopulation.push_back(std::make_shared<AquariumLevelPopulationNode>(AquariumCreatureType::NPCreature, 30));
-            this->m_levelPopulation.push_back(std::make_shared<AquariumLevelPopulationNode>(AquariumCreatureType::BiggerFish, 5));
-
+            this->m_levelPopulation.push_back(std::make_shared<AquariumLevelPopulationNode>(AquariumCreatureType::NPCreature, 20));
+            this->m_levelPopulation.push_back(std::make_shared<AquariumLevelPopulationNode>(AquariumCreatureType::BiggerFish, 3));
+            this->m_levelPopulation.push_back(std::make_shared<AquariumLevelPopulationNode>(AquariumCreatureType::DashPowerUp, 2));
+            this->m_levelPopulation.push_back(std::make_shared<AquariumLevelPopulationNode>(AquariumCreatureType::ZigzagFish, 4));
+            this->m_levelPopulation.push_back(std::make_shared<AquariumLevelPopulationNode>(AquariumCreatureType::CircularFish, 3));
         };
-        std::vector<AquariumCreatureType> Repopulate() override;
+};
 
+
+class Level_3 : public AquariumLevel  {
+    public:
+        Level_3(int levelNumber, int targetScore): AquariumLevel(levelNumber, targetScore){
+            this->m_levelPopulation.push_back(std::make_shared<AquariumLevelPopulationNode>(AquariumCreatureType::NPCreature, 15));
+            this->m_levelPopulation.push_back(std::make_shared<AquariumLevelPopulationNode>(AquariumCreatureType::BiggerFish, 5));
+            this->m_levelPopulation.push_back(std::make_shared<AquariumLevelPopulationNode>(AquariumCreatureType::ZigzagFish, 8));
+            this->m_levelPopulation.push_back(std::make_shared<AquariumLevelPopulationNode>(AquariumCreatureType::DashPowerUp, 1));
+        };
+};
+
+class Level_4 : public AquariumLevel  {
+    public:
+        Level_4(int levelNumber, int targetScore): AquariumLevel(levelNumber, targetScore){
+            this->m_levelPopulation.push_back(std::make_shared<AquariumLevelPopulationNode>(AquariumCreatureType::NPCreature, 10));
+            this->m_levelPopulation.push_back(std::make_shared<AquariumLevelPopulationNode>(AquariumCreatureType::CircularFish, 8));
+            this->m_levelPopulation.push_back(std::make_shared<AquariumLevelPopulationNode>(AquariumCreatureType::ZigzagFish, 8));
+            this->m_levelPopulation.push_back(std::make_shared<AquariumLevelPopulationNode>(AquariumCreatureType::DashPowerUp, 2));
+        };
+};
+
+class Level_5 : public AquariumLevel  {
+    public:
+        Level_5(int levelNumber, int targetScore): AquariumLevel(levelNumber, targetScore){
+            this->m_levelPopulation.push_back(std::make_shared<AquariumLevelPopulationNode>(AquariumCreatureType::BiggerFish, 8));
+            this->m_levelPopulation.push_back(std::make_shared<AquariumLevelPopulationNode>(AquariumCreatureType::CircularFish, 6));
+            this->m_levelPopulation.push_back(std::make_shared<AquariumLevelPopulationNode>(AquariumCreatureType::ZigzagFish, 6));
+            this->m_levelPopulation.push_back(std::make_shared<AquariumLevelPopulationNode>(AquariumCreatureType::DashPowerUp, 3));
+            this->m_levelPopulation.push_back(std::make_shared<AquariumLevelPopulationNode>(AquariumCreatureType::NPCreature, 5));
+        };
 };

@@ -8,6 +8,12 @@ string AquariumCreatureTypeToString(AquariumCreatureType t){
             return "BiggerFish";
         case AquariumCreatureType::NPCreature:
             return "BaseFish";
+        case AquariumCreatureType::DashPowerUp:
+            return "DashPowerUp";
+        case AquariumCreatureType::ZigzagFish:
+            return "ZigzagFish";
+        case AquariumCreatureType::CircularFish:
+            return "CircularFish";
         default:
             return "UknownFish";
     }
@@ -38,7 +44,45 @@ void PlayerCreature::reduceDamageDebounce() {
 
 void PlayerCreature::update() {
     this->reduceDamageDebounce();
+    this->updateDash();
     this->move();
+}
+
+
+void PlayerCreature::unlockDash() {
+    m_dashUnlocked = true;
+    ofLogNotice() << "Dash ability unlocked! Press Space to dash." << std::endl;
+}
+
+bool PlayerCreature::canDash() const {
+    return m_dashUnlocked && m_dashCooldown <= 0 && !m_dashActive;
+}
+
+void PlayerCreature::tryStartDash() {
+    if (!m_dashUnlocked) return;
+    if (m_dashActive) return;
+    if (m_dashCooldown > 0) return;
+    m_dashActive = true;
+    m_dashTimer = m_dashDuration;
+}
+
+void PlayerCreature::updateDash() {
+   
+    if (!m_dashActive && m_dashCooldown > 0) {
+        --m_dashCooldown;
+    }
+
+    if (m_dashActive) {
+        if (m_dashTimer > 0) {
+            m_speed = m_dashSpeed;
+            --m_dashTimer;
+        } else {
+            
+            m_dashActive = false;
+            m_speed = m_baseSpeed;
+            m_dashCooldown = m_dashCooldownDuration;
+        }
+    }
 }
 
 
@@ -131,11 +175,119 @@ void BiggerFish::draw() const {
     this->m_sprite->draw(this->m_x, this->m_y);
 }
 
+ZigzagFish::ZigzagFish(float x, float y, int speed, std::shared_ptr<GameSprite> sprite)
+: NPCreature(x, y, speed, sprite) {
+    m_value = 3;
+    m_creatureType = AquariumCreatureType::ZigzagFish;
+    setCollisionRadius(40);
+}
+
+void ZigzagFish::move() {
+    m_zigzagTimer++;
+    if (m_zigzagTimer >= m_zigzagPeriod) {
+        m_zigzagTimer = 0;
+       
+        float oldDx = m_dx;
+        m_dx = -m_dy;
+        m_dy = oldDx;
+        normalize();
+    }
+    
+    m_x += m_dx * m_speed;
+    m_y += m_dy * m_speed;
+    
+    if (m_dx < 0) {
+        this->m_sprite->setFlipped(true);
+    } else {
+        this->m_sprite->setFlipped(false);
+    }
+    
+    bounce();
+}
+
+void ZigzagFish::draw() const {
+    ofLogVerbose() << "ZigzagFish at (" << m_x << ", " << m_y << ")" << std::endl;
+    ofSetColor(ofColor::yellow, 128); 
+    if (m_sprite) {
+        m_sprite->draw(m_x, m_y);
+    }
+    ofSetColor(ofColor::white);
+}
+
+CircularFish::CircularFish(float x, float y, int speed, std::shared_ptr<GameSprite> sprite)
+: NPCreature(x, y, speed, sprite) {
+    m_value = 4;
+    m_creatureType = AquariumCreatureType::CircularFish;
+    setCollisionRadius(45);
+    m_centerX = x;
+    m_centerY = y;
+}
+
+void CircularFish::move() {
+    m_angle += m_rotationSpeed;
+    if (m_angle >= 2 * PI) m_angle -= 2 * PI;
+    
+    float targetX = m_centerX + cos(m_angle) * m_radius;
+    float targetY = m_centerY + sin(m_angle) * m_radius;
+    
+    // Update center position based on boundaries
+    if (targetX < m_radius || targetX > ofGetWidth() - m_radius) {
+        m_centerX = m_radius + rand() % (int)(ofGetWidth() - 2 * m_radius);
+    }
+    if (targetY < m_radius || targetY > ofGetHeight() - m_radius) {
+        m_centerY = m_radius + rand() % (int)(ofGetHeight() - 2 * m_radius);
+    }
+    
+    m_x = m_centerX + cos(m_angle) * m_radius;
+    m_y = m_centerY + sin(m_angle) * m_radius;
+    
+    
+    if (cos(m_angle) < 0) {
+        this->m_sprite->setFlipped(true);
+    } else {
+        this->m_sprite->setFlipped(false);
+    }
+}
+
+void CircularFish::draw() const {
+    ofLogVerbose() << "CircularFish at (" << m_x << ", " << m_y << ")" << std::endl;
+    ofSetColor(ofColor::purple, 128); 
+    if (m_sprite) {
+        m_sprite->draw(m_x, m_y);
+    }
+    ofSetColor(ofColor::white);
+}
+
+DashPowerUp::DashPowerUp(float x, float y, std::shared_ptr<GameSprite> sprite)
+: NPCreature(x, y, 0, sprite) {
+    
+    setCollisionRadius(30);
+    m_value = 0;
+    m_creatureType = AquariumCreatureType::DashPowerUp;
+}
+
+void DashPowerUp::move() {
+   
+}
+
+void DashPowerUp::draw() const {
+    ofLogVerbose() << "DashPowerUp at (" << m_x << ", " << m_y << ")" << std::endl;
+   
+    ofSetColor(ofColor::cyan);
+    ofDrawCircle(m_x + 15, m_y + 15, 18);
+    ofSetColor(ofColor::white);
+    if (m_sprite) m_sprite->draw(m_x, m_y);
+}
+
 
 // AquariumSpriteManager
 AquariumSpriteManager::AquariumSpriteManager(){
     this->m_npc_fish = std::make_shared<GameSprite>("base-fish.png", 70,70);
     this->m_big_fish = std::make_shared<GameSprite>("bigger-fish.png", 120, 120);
+    this->m_zigzag_fish = std::make_shared<GameSprite>("Uniquespriteart1.png", 80, 80);
+    this->m_circular_fish = std::make_shared<GameSprite>("Uniquespriteart2.png", 90, 90);
+   
+    this->m_powerup = std::make_shared<GameSprite>("powerup.png", 40, 40);
 }
 
 std::shared_ptr<GameSprite> AquariumSpriteManager::GetSprite(AquariumCreatureType t){
@@ -145,6 +297,12 @@ std::shared_ptr<GameSprite> AquariumSpriteManager::GetSprite(AquariumCreatureTyp
             
         case AquariumCreatureType::NPCreature:
             return std::make_shared<GameSprite>(*this->m_npc_fish);
+        case AquariumCreatureType::DashPowerUp:
+            return std::make_shared<GameSprite>(*this->m_powerup);
+        case AquariumCreatureType::ZigzagFish:
+            return std::make_shared<GameSprite>(*this->m_zigzag_fish);
+        case AquariumCreatureType::CircularFish:
+            return std::make_shared<GameSprite>(*this->m_circular_fish);
         default:
             return nullptr;
     }
@@ -210,7 +368,7 @@ std::shared_ptr<Creature> Aquarium::getCreatureAt(int index) {
 void Aquarium::SpawnCreature(AquariumCreatureType type) {
     int x = rand() % this->getWidth();
     int y = rand() % this->getHeight();
-    int speed = 1 + rand() % 25; // Speed between 1 and 25
+    int speed = 1 + rand() % 12; // Reduced speed range to 1-12
 
     switch (type) {
         case AquariumCreatureType::NPCreature:
@@ -218,6 +376,15 @@ void Aquarium::SpawnCreature(AquariumCreatureType type) {
             break;
         case AquariumCreatureType::BiggerFish:
             this->addCreature(std::make_shared<BiggerFish>(x, y, speed, this->m_sprite_manager->GetSprite(AquariumCreatureType::BiggerFish)));
+            break;
+        case AquariumCreatureType::DashPowerUp:
+            this->addCreature(std::make_shared<DashPowerUp>(x, y, this->m_sprite_manager->GetSprite(AquariumCreatureType::DashPowerUp)));
+            break;
+        case AquariumCreatureType::ZigzagFish:
+            this->addCreature(std::make_shared<ZigzagFish>(x, y, speed, this->m_sprite_manager->GetSprite(AquariumCreatureType::ZigzagFish)));
+            break;
+        case AquariumCreatureType::CircularFish:
+            this->addCreature(std::make_shared<CircularFish>(x, y, speed, this->m_sprite_manager->GetSprite(AquariumCreatureType::CircularFish)));
             break;
         default:
             ofLogError() << "Unknown creature type to spawn!";
@@ -285,6 +452,13 @@ void AquariumGameScene::Update(){
             ofLogVerbose() << "Collision detected between player and NPC!" << std::endl;
             if(event->creatureB != nullptr){
                 event->print();
+                
+                auto npc = std::static_pointer_cast<NPCreature>(event->creatureB);
+                if (npc && npc->GetType() == AquariumCreatureType::DashPowerUp) {
+                    this->m_aquarium->removeCreature(event->creatureB);
+                    this->m_player->unlockDash(); 
+                }
+
                 this->m_player->bounceFrom(event->creatureB);
                 event->creatureB->bounceFrom(this->m_player);
                 if(this->m_player->getPower() < event->creatureB->getValue()){
@@ -302,10 +476,7 @@ void AquariumGameScene::Update(){
                         this->m_player->increasePower(1);
                         ofLogNotice() << "Player power increased to " << this->m_player->getPower() << "!" << std::endl;
                     }
-                    
                 }
-                
-                
 
             } else {
                 ofLogError() << "Error: creatureB is null in collision event." << std::endl;
@@ -333,6 +504,20 @@ void AquariumGameScene::paintAquariumHUD(){
         ofSetColor(ofColor::red);
         ofDrawCircle(panelWidth + i * 20, 50, 5);
     }
+
+    
+    std::string dashStatus;
+    if (!this->m_player->isDashing() && !this->m_player->canDash()) {
+       
+        dashStatus = this->m_player->isDashing() ? "Dashing" : "Cooldown/Locked";
+    } else if (this->m_player->isDashing()) {
+        dashStatus = "Dashing";
+    } else {
+        dashStatus = "Ready";
+    }
+
+    ofDrawBitmapString("Dash: " + dashStatus, panelWidth, 60);
+
     ofSetColor(ofColor::white); // Reset color to white for other drawings
 }
 
@@ -365,42 +550,13 @@ bool AquariumLevel::isCompleted(){
 
 
 
-std::vector<AquariumCreatureType> Level_0::Repopulate() {
+std::vector<AquariumCreatureType> AquariumLevel::Repopulate() {
     std::vector<AquariumCreatureType> toRepopulate;
     for(std::shared_ptr<AquariumLevelPopulationNode> node : this->m_levelPopulation){
         int delta = node->population - node->currentPopulation;
-        ofLogVerbose() << "to Repopulate :  " << delta << endl;
-        if(delta >0){
-            for(int i = 0; i<delta; i++){
-                toRepopulate.push_back(node->creatureType);
-            }
-            node->currentPopulation += delta;
-        }
-    }
-    return toRepopulate;
-
-}
-
-std::vector<AquariumCreatureType> Level_1::Repopulate() {
-    std::vector<AquariumCreatureType> toRepopulate;
-    for(std::shared_ptr<AquariumLevelPopulationNode> node : this->m_levelPopulation){
-        int delta = node->population - node->currentPopulation;
-        if(delta >0){
-            for(int i=0; i<delta; i++){
-                toRepopulate.push_back(node->creatureType);
-            }
-            node->currentPopulation += delta;
-        }
-    }
-    return toRepopulate;
-}
-
-std::vector<AquariumCreatureType> Level_2::Repopulate() {
-    std::vector<AquariumCreatureType> toRepopulate;
-    for(std::shared_ptr<AquariumLevelPopulationNode> node : this->m_levelPopulation){
-        int delta = node->population - node->currentPopulation;
-        if(delta >0){
-            for(int i=0; i<delta; i++){
+        ofLogVerbose() << "to Repopulate " << AquariumCreatureTypeToString(node->creatureType) << ": " << delta << endl;
+        if(delta > 0){
+            for(int i = 0; i < delta; i++){
                 toRepopulate.push_back(node->creatureType);
             }
             node->currentPopulation += delta;

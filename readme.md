@@ -24,7 +24,7 @@ Grading
 ## Team Info
 | Student Number | Student Name | Student Email |
 |-|-|-|
-|(STUDENT NUMBER HERE)| (STUDENT NAME HERE)| (STUDENT EMAIL HERE) |
+|(802-23-3835)| (Alvin Y. Roman)| (alvin.roman4@upr.edu) |
 |(STUDENT NUMBER HERE)| (STUDENT NAME HERE)| (STUDENT EMAIL HERE) |
 
 ---
