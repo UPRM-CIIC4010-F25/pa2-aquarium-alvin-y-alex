@@ -25,7 +25,7 @@ Grading
 | Student Number | Student Name | Student Email |
 |-|-|-|
 |(802-23-3835)| (Alvin Y. Roman)| (alvin.roman4@upr.edu) |
-|(STUDENT NUMBER HERE)| (STUDENT NAME HERE)| (STUDENT EMAIL HERE) |
+|(802-24-5826)| (Alex J. Collazo)| (alex.collazo3@upr.edu) |
 
 ---
 
